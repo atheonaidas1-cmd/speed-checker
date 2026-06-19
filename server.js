@@ -6,34 +6,49 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '10mb' })); // allow large canvas data
-app.use(express.static(path.join(__dirname))); // serve index.html
+// In-memory store for the most recent data (fallback if file write fails)
+let lastData = null;
 
-// Endpoint to receive data
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname)));
+
 app.post('/collect', (req, res) => {
     const data = req.body;
     if (!data) {
         return res.status(400).json({ status: 'error', message: 'No data' });
     }
 
-    // Append to log file (data.log) – will be written inside the Render container
-    const logEntry = `[${new Date().toISOString()}] ${JSON.stringify(data)}\n`;
-    fs.appendFileSync('data.log', logEntry, 'utf8');
+    // Store in memory
+    lastData = data;
 
-    // Also log to console for Render logs
+    // Try to write to file – but if it fails, we still have memory
+    try {
+        const logEntry = `[${new Date().toISOString()}] ${JSON.stringify(data)}\n`;
+        fs.appendFileSync('data.log', logEntry, 'utf8');
+    } catch (err) {
+        console.error('File write failed:', err.message);
+    }
+
     console.log('Received data:', JSON.stringify(data, null, 2));
-
     res.json({ status: 'success', message: 'Data logged' });
 });
 
-// Serve the log file if needed (optional)
+// Endpoint that returns the in-memory data (always works)
+app.get('/rawlog', (req, res) => {
+    if (lastData) {
+        res.json(lastData);
+    } else {
+        res.status(404).json({ status: 'error', message: 'No data captured yet' });
+    }
+});
+
+// Original /log endpoint (may fail if file not writable)
 app.get('/log', (req, res) => {
     if (fs.existsSync('data.log')) {
         res.sendFile(path.join(__dirname, 'data.log'));
     } else {
-        res.status(404).send('No log yet');
+        res.status(404).send('No log file yet');
     }
 });
 
