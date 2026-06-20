@@ -2,17 +2,40 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// In‑memory storage
+// Admin password – set in Render environment variable ADMIN_PASSWORD
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+// Session store (in-memory)
+const sessions = {};
+
+// In‑memory storage for logs
 let logHistory = [];
 let lastData = null;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
+
+// ---- Helper: generate session token ----
+function generateToken() {
+    return crypto.randomBytes(16).toString('hex');
+}
+
+// ---- Helper: check if session is valid ----
+function isAuthenticated(req) {
+    const token = req.cookies?.admin_session;
+    if (!token) return false;
+    if (sessions[token] && sessions[token].expires > Date.now()) {
+        return true;
+    }
+    return false;
+}
 
 // ---- POST /collect ----
 app.post('/collect', (req, res) => {
@@ -42,8 +65,53 @@ app.post('/collect', (req, res) => {
     res.json({ status: 'success', message: 'Data logged' });
 });
 
-// ---- GET /records – HTML table ----
-app.get('/records', (req, res) => {
+// ---- GET /login ----
+app.get('/login', (req, res) => {
+    res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Admin Login</title>
+        <style>
+            body { font-family: Arial; background: #f5f7fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin:0; }
+            .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+            input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+            button { padding: 12px 30px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; }
+            .error { color: red; }
+        </style>
+        </head>
+        <body>
+        <div class="card">
+            <h2>Admin Login</h2>
+            <form method="POST" action="/login">
+                <input type="password" name="password" placeholder="Enter admin password" required>
+                <button type="submit">Login</button>
+                <div class="error">${req.query.error ? 'Invalid password' : ''}</div>
+            </form>
+        </div>
+        </body>
+        </html>
+    `);
+});
+
+// ---- POST /login ----
+app.post('/login', (req, res) => {
+    const { password } = req.body;
+    if (password === ADMIN_PASSWORD) {
+        const token = generateToken();
+        sessions[token] = { expires: Date.now() + 3600000 }; // 1 hour
+        res.cookie('admin_session', token, { httpOnly: true, maxAge: 3600000 });
+        return res.redirect('/admin');
+    } else {
+        return res.redirect('/login?error=1');
+    }
+});
+
+// ---- GET /admin ----
+app.get('/admin', (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.redirect('/login');
+    }
+
     let rows = '';
     if (logHistory.length === 0) {
         rows = '<tr><td colspan="7" style="text-align:center;">No records yet.</td></tr>';
@@ -70,8 +138,7 @@ app.get('/records', (req, res) => {
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visitor Records</title>
+    <title>Admin - Visitor Records</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f7fa; margin: 20px; }
         .container { max-width: 1200px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
@@ -81,14 +148,14 @@ app.get('/records', (req, res) => {
         th { background: #1a73e8; color: white; padding: 12px 10px; text-align: left; }
         td { padding: 10px; border-bottom: 1px solid #e9ecf2; vertical-align: middle; }
         tr:hover { background: #f0f4ff; }
-        .badge { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
-        .footer { margin-top: 20px; font-size: 13px; color: #999; }
+        .logout { margin-top: 20px; }
+        .logout a { color: #1a73e8; text-decoration: none; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>📋 Visitor Records</h1>
-    <div class="meta">Total entries: <strong>${logHistory.length}</strong></div>
+    <div class="meta">Total entries: <strong>${logHistory.length}</strong> &nbsp;|&nbsp; <a href="/logout">Logout</a></div>
     <table>
         <thead>
             <tr>
@@ -104,14 +171,32 @@ app.get('/records', (req, res) => {
             ${rows}
         </tbody>
     </table>
-    <div class="footer">Data is stored in memory. Copy this page or use /logs for raw JSON.</div>
+    <div class="footer" style="margin-top:20px; font-size:13px; color:#999;">Data is stored in memory. Use "Logout" to end session.</div>
 </div>
 </body>
 </html>`;
     res.send(html);
 });
 
-// ---- Legacy endpoints ----
+// ---- GET /logout ----
+app.get('/logout', (req, res) => {
+    const token = req.cookies?.admin_session;
+    if (token) {
+        delete sessions[token];
+        res.clearCookie('admin_session');
+    }
+    res.redirect('/login');
+});
+
+// ---- Legacy endpoints (kept for compatibility) ----
+app.get('/records', (req, res) => {
+    // Redirect to admin if authenticated, else show login
+    if (isAuthenticated(req)) {
+        return res.redirect('/admin');
+    }
+    res.redirect('/login');
+});
+
 app.get('/logs', (req, res) => {
     if (logHistory.length === 0) {
         return res.status(404).json({ status: 'error', message: 'No logs yet' });
