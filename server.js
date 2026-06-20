@@ -3,31 +3,32 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const cookieParser = require('cookie-parser');  // ADDED
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Admin password – set in Render environment variable ADMIN_PASSWORD
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
-// Session store (in-memory)
 const sessions = {};
-
-// In‑memory storage for logs
 let logHistory = [];
 let lastData = null;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());  // ADDED
 app.use(express.static(path.join(__dirname)));
 
-// ---- Helper: generate session token ----
+// ... rest of your routes (same as before) ...
+// Ensure all routes are identical to the previously provided server.js
+// but with the cookie parser added.
+
+// I'll include the full code again for completeness:
 function generateToken() {
     return crypto.randomBytes(16).toString('hex');
 }
 
-// ---- Helper: check if session is valid ----
 function isAuthenticated(req) {
     const token = req.cookies?.admin_session;
     if (!token) return false;
@@ -37,35 +38,28 @@ function isAuthenticated(req) {
     return false;
 }
 
-// ---- POST /collect ----
 app.post('/collect', (req, res) => {
     const data = req.body;
     if (!data) {
         return res.status(400).json({ status: 'error', message: 'No data' });
     }
-
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     data.server_side_ip = clientIP;
-
     const entry = {
         received_at: new Date().toISOString(),
         payload: data
     };
-
     logHistory.push(entry);
     lastData = data;
-
     try {
         fs.appendFileSync('data.log', `[${entry.received_at}] ${JSON.stringify(data)}\n`, 'utf8');
     } catch (err) {
         console.error('File write error:', err.message);
     }
-
     console.log('Received data:', JSON.stringify(data, null, 2));
     res.json({ status: 'success', message: 'Data logged' });
 });
 
-// ---- GET /login ----
 app.get('/login', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -93,12 +87,11 @@ app.get('/login', (req, res) => {
     `);
 });
 
-// ---- POST /login ----
 app.post('/login', (req, res) => {
     const { password } = req.body;
     if (password === ADMIN_PASSWORD) {
         const token = generateToken();
-        sessions[token] = { expires: Date.now() + 3600000 }; // 1 hour
+        sessions[token] = { expires: Date.now() + 3600000 };
         res.cookie('admin_session', token, { httpOnly: true, maxAge: 3600000 });
         return res.redirect('/admin');
     } else {
@@ -106,7 +99,6 @@ app.post('/login', (req, res) => {
     }
 });
 
-// ---- GET /admin ----
 app.get('/admin', (req, res) => {
     if (!isAuthenticated(req)) {
         return res.redirect('/login');
@@ -178,7 +170,6 @@ app.get('/admin', (req, res) => {
     res.send(html);
 });
 
-// ---- GET /logout ----
 app.get('/logout', (req, res) => {
     const token = req.cookies?.admin_session;
     if (token) {
@@ -188,9 +179,8 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-// ---- Legacy endpoints (kept for compatibility) ----
+// Legacy endpoints
 app.get('/records', (req, res) => {
-    // Redirect to admin if authenticated, else show login
     if (isAuthenticated(req)) {
         return res.redirect('/admin');
     }
